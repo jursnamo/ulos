@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://enterprise.com/ulos/workflow">
+
+    <process id="loanApproval" name="Loan Approval" isExecutable="true">
+        <startEvent id="startEvent" />
+        <userTask id="reviewTask" name="Review Loan" />
+        <endEvent id="endEvent" />
+
+        <sequenceFlow id="flowStartToReview" sourceRef="startEvent" targetRef="reviewTask" />
+        <sequenceFlow id="flowReviewToEnd" sourceRef="reviewTask" targetRef="endEvent" />
+    </process>
+
+    <bpmndi:BPMNDiagram id="BPMNDiagram_loanApproval">
+        <bpmndi:BPMNPlane id="BPMNPlane_loanApproval" bpmnElement="loanApproval">
+            <bpmndi:BPMNShape id="startEvent_di" bpmnElement="startEvent">
+                <dc:Bounds x="173" y="117" width="36" height="36" />
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="reviewTask_di" bpmnElement="reviewTask">
+                <dc:Bounds x="270" y="95" width="100" height="80" />
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="endEvent_di" bpmnElement="endEvent">
+                <dc:Bounds x="432" y="117" width="36" height="36" />
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="flowStartToReview_di" bpmnElement="flowStartToReview">
+                <di:waypoint x="209" y="135" />
+                <di:waypoint x="270" y="135" />
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="flowReviewToEnd_di" bpmnElement="flowReviewToEnd">
+                <di:waypoint x="370" y="135" />
+                <di:waypoint x="432" y="135" />
+            </bpmndi:BPMNEdge>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</definitions>
