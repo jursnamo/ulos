@@ -11,4 +11,6 @@ public interface BpmnModelRepository extends JpaRepository<BpmnModelEntity, Long
     Optional<BpmnModelEntity> findTopByProcessKeyOrderByVersionDesc(String processKey);
 
     List<BpmnModelEntity> findByProcessKeyOrderByVersionDesc(String processKey);
+
+    List<BpmnModelEntity> findAllByOrderByProcessKeyAscVersionDesc();
 }

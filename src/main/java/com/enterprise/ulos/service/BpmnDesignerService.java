@@ -4,6 +4,7 @@ import com.enterprise.ulos.domain.bpmn.BpmnDeployRequest;
 import com.enterprise.ulos.domain.bpmn.BpmnDeployResponse;
 import com.enterprise.ulos.domain.bpmn.BpmnModelEntity;
 import com.enterprise.ulos.domain.bpmn.BpmnXmlResponse;
+import com.enterprise.ulos.los.model.BpmnApiModels;
 import com.enterprise.ulos.repository.BpmnModelRepository;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.repository.Deployment;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Service
 @Transactional
@@ -38,7 +40,9 @@ public class BpmnDesignerService {
                     storedModel.getProcessDefinitionId(),
                     storedModel.getVersion(),
                     storedModel.getResourceName(),
-                    storedModel.getBpmnXml()
+                    storedModel.getBpmnXml(),
+                    storedModel.getDeployedBy(),
+                    storedModel.getChangeSummary()
             );
         }
 
@@ -65,11 +69,34 @@ public class BpmnDesignerService {
                     processDefinition.getId(),
                     processDefinition.getVersion(),
                     processDefinition.getResourceName(),
-                    bpmnXml
+                    bpmnXml,
+                    null,
+                    null
             );
         } catch (IOException exception) {
             throw new UncheckedIOException("Failed to read BPMN XML for process: " + processKey, exception);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<BpmnApiModels.BpmnVersionResponse> listVersions() {
+        return bpmnModelRepository.findAllByOrderByProcessKeyAscVersionDesc()
+                .stream()
+                .map(model -> new BpmnApiModels.BpmnVersionResponse(
+                        model.getId(),
+                        model.getProcessKey(),
+                        model.getProcessName(),
+                        model.getResourceName(),
+                        model.getProcessDefinitionId(),
+                        model.getDeploymentId(),
+                        model.getVersion(),
+                        model.isActive(),
+                        model.getDeployedBy(),
+                        model.getChangeSummary(),
+                        model.getCreatedAt(),
+                        model.getUpdatedAt()
+                ))
+                .toList();
     }
 
     public BpmnDeployResponse deployProcess(BpmnDeployRequest request) {
@@ -101,7 +128,9 @@ public class BpmnDesignerService {
                 processDefinition.getId(),
                 processDefinition.getKey(),
                 processDefinition.getVersion(),
-                processDefinition.getResourceName()
+                processDefinition.getResourceName(),
+                request.deployedBy(),
+                request.changeSummary()
         );
     }
 
@@ -115,6 +144,8 @@ public class BpmnDesignerService {
         model.setProcessDefinitionId(processDefinition.getId());
         model.setVersion(processDefinition.getVersion());
         model.setActive(true);
+        model.setDeployedBy(request.deployedBy());
+        model.setChangeSummary(request.changeSummary());
         bpmnModelRepository.save(model);
     }
 

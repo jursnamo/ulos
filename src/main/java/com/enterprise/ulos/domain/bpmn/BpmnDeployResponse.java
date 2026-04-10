@@ -6,6 +6,8 @@ public record BpmnDeployResponse(
         String processDefinitionId,
         String processDefinitionKey,
         Integer processDefinitionVersion,
-        String resourceName
+        String resourceName,
+        String deployedBy,
+        String changeSummary
 ) {
 }

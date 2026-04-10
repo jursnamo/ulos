@@ -5,6 +5,8 @@ public record BpmnXmlResponse(
         String processDefinitionId,
         Integer version,
         String resourceName,
-        String bpmnXml
+        String bpmnXml,
+        String deployedBy,
+        String changeSummary
 ) {
 }

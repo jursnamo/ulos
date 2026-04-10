@@ -6,15 +6,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-
-import java.time.LocalDateTime;
+import com.enterprise.ulos.los.entity.AbstractAuditableEntity;
 
 @Entity
 @Table(name = "bpmn_model")
-public class BpmnModelEntity {
+public class BpmnModelEntity extends AbstractAuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,7 +27,7 @@ public class BpmnModelEntity {
     private String resourceName;
 
     @Lob
-    @Column(name = "bpmn_xml", nullable = false)
+    @Column(name = "bpmn_xml", nullable = false, columnDefinition = "LONGTEXT")
     private String bpmnXml;
 
     @Column(name = "deployment_id", length = 100)
@@ -45,11 +42,11 @@ public class BpmnModelEntity {
     @Column(name = "active_flag", nullable = false)
     private boolean active;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "deployed_by", length = 100)
+    private String deployedBy;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "change_summary", length = 500)
+    private String changeSummary;
 
     public Long getId() {
         return id;
@@ -119,23 +116,19 @@ public class BpmnModelEntity {
         this.active = active;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public String getDeployedBy() {
+        return deployedBy;
     }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
+    public void setDeployedBy(String deployedBy) {
+        this.deployedBy = deployedBy;
     }
 
-    @PrePersist
-    void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-        createdAt = now;
-        updatedAt = now;
+    public String getChangeSummary() {
+        return changeSummary;
     }
 
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    public void setChangeSummary(String changeSummary) {
+        this.changeSummary = changeSummary;
     }
 }

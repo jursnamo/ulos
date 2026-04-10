@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://enterprise.com/ulos/approval">
+
+    <process id="corporateCreditApproval" name="Corporate Credit Approval" isExecutable="true">
+        <startEvent id="startEvent" name="Application Submitted"/>
+
+        <exclusiveGateway id="hardStopGateway" name="Hard Stop?"/>
+        <endEvent id="hardStopEnd" name="Hard Stop"/>
+
+        <userTask id="analystReviewTask" name="Credit Analyst Review" flowable:assignee="${analystAssignee}"/>
+        <exclusiveGateway id="analystDecisionGateway" name="Analyst Decision"/>
+
+        <userTask id="branchApprovalTask" name="Branch Manager Approval" flowable:assignee="${baseApprover}"/>
+        <exclusiveGateway id="branchDecisionGateway" name="Branch Decision"/>
+
+        <userTask id="regionalApprovalTask" name="Regional Head Approval" flowable:assignee="${regionalApprover}"/>
+        <exclusiveGateway id="regionalDecisionGateway" name="Regional Decision"/>
+
+        <userTask id="committeeApprovalTask" name="Credit Committee Approval" flowable:assignee="${committeeApprover}"/>
+        <exclusiveGateway id="committeeDecisionGateway" name="Committee Decision"/>
+
+        <userTask id="boardApprovalTask" name="Board Approval" flowable:assignee="${boardApprover}"/>
+        <exclusiveGateway id="boardDecisionGateway" name="Board Decision"/>
+
+        <endEvent id="approvedEnd" name="Approved"/>
+        <endEvent id="rejectedEnd" name="Rejected"/>
+
+        <sequenceFlow id="flow_start_hard_stop" sourceRef="startEvent" targetRef="hardStopGateway"/>
+        <sequenceFlow id="flow_hard_stop_yes" sourceRef="hardStopGateway" targetRef="hardStopEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${hardStop}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_hard_stop_no" sourceRef="hardStopGateway" targetRef="analystReviewTask"/>
+
+        <sequenceFlow id="flow_analyst_gateway" sourceRef="analystReviewTask" targetRef="analystDecisionGateway"/>
+        <sequenceFlow id="flow_analyst_reject" sourceRef="analystDecisionGateway" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_analyst_approve" sourceRef="analystDecisionGateway" targetRef="branchApprovalTask"/>
+
+        <sequenceFlow id="flow_branch_gateway" sourceRef="branchApprovalTask" targetRef="branchDecisionGateway"/>
+        <sequenceFlow id="flow_branch_reject" sourceRef="branchDecisionGateway" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_branch_regional" sourceRef="branchDecisionGateway" targetRef="regionalApprovalTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiresRegionalApproval}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_branch_committee" sourceRef="branchDecisionGateway" targetRef="committeeApprovalTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!requiresRegionalApproval && requiresCommitteeApproval}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_branch_board" sourceRef="branchDecisionGateway" targetRef="boardApprovalTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!requiresRegionalApproval && !requiresCommitteeApproval && requiresBoardApproval}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_branch_approved" sourceRef="branchDecisionGateway" targetRef="approvedEnd"/>
+
+        <sequenceFlow id="flow_regional_gateway" sourceRef="regionalApprovalTask" targetRef="regionalDecisionGateway"/>
+        <sequenceFlow id="flow_regional_reject" sourceRef="regionalDecisionGateway" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_regional_committee" sourceRef="regionalDecisionGateway" targetRef="committeeApprovalTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiresCommitteeApproval}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_regional_board" sourceRef="regionalDecisionGateway" targetRef="boardApprovalTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!requiresCommitteeApproval && requiresBoardApproval}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_regional_approved" sourceRef="regionalDecisionGateway" targetRef="approvedEnd"/>
+
+        <sequenceFlow id="flow_committee_gateway" sourceRef="committeeApprovalTask" targetRef="committeeDecisionGateway"/>
+        <sequenceFlow id="flow_committee_reject" sourceRef="committeeDecisionGateway" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_committee_board" sourceRef="committeeDecisionGateway" targetRef="boardApprovalTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiresBoardApproval}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_committee_approved" sourceRef="committeeDecisionGateway" targetRef="approvedEnd"/>
+
+        <sequenceFlow id="flow_board_gateway" sourceRef="boardApprovalTask" targetRef="boardDecisionGateway"/>
+        <sequenceFlow id="flow_board_reject" sourceRef="boardDecisionGateway" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_board_approved" sourceRef="boardDecisionGateway" targetRef="approvedEnd"/>
+    </process>
+</definitions>
