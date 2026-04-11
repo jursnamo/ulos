@@ -1,6 +1,7 @@
 package com.enterprise.ulos.controller;
 
 import com.enterprise.ulos.domain.loan.LoanResponse;
+import com.enterprise.ulos.los.security.RequiresRoles;
 import com.enterprise.ulos.service.LoanService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,11 +21,13 @@ public class LoanController {
     }
 
     @GetMapping
+    @RequiresRoles({"ADMIN", "ANALYST", "RISK", "COMMITTEE", "VIEWER"})
     public List<LoanResponse> getLoans() {
         return loanService.getLoans();
     }
 
     @GetMapping("/{loanId}")
+    @RequiresRoles({"ADMIN", "ANALYST", "RISK", "COMMITTEE", "VIEWER"})
     public LoanResponse getLoan(@PathVariable String loanId) {
         return loanService.getLoan(loanId);
     }

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://enterprise.com/ulos/workflow">
+
+    <process id="corporateLosApproval" name="Corporate LOS Approval" isExecutable="true">
+        <startEvent id="startEvent" name="Start"/>
+
+        <sequenceFlow id="flow_start_analyst" sourceRef="startEvent" targetRef="analystReviewTask"/>
+
+        <userTask id="analystReviewTask" name="Credit Analyst Review" flowable:assignee="ANALYST"/>
+        <sequenceFlow id="flow_analyst_gateway" sourceRef="analystReviewTask" targetRef="analystDecision"/>
+
+        <exclusiveGateway id="analystDecision" name="Analyst Decision"/>
+        <sequenceFlow id="flow_analyst_approved" sourceRef="analystDecision" targetRef="riskReviewTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_analyst_rejected" sourceRef="analystDecision" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+
+        <userTask id="riskReviewTask" name="Risk Review" flowable:assignee="RISK"/>
+        <sequenceFlow id="flow_risk_gateway" sourceRef="riskReviewTask" targetRef="riskDecision"/>
+
+        <exclusiveGateway id="riskDecision" name="Risk Decision"/>
+        <sequenceFlow id="flow_risk_approved" sourceRef="riskDecision" targetRef="committeeApprovalTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_risk_rejected" sourceRef="riskDecision" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+
+        <userTask id="committeeApprovalTask" name="Committee Approval" flowable:assignee="COMMITTEE"/>
+        <sequenceFlow id="flow_committee_gateway" sourceRef="committeeApprovalTask" targetRef="committeeDecision"/>
+
+        <exclusiveGateway id="committeeDecision" name="Committee Decision"/>
+        <sequenceFlow id="flow_committee_approved" sourceRef="committeeDecision" targetRef="approvedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approved}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_committee_rejected" sourceRef="committeeDecision" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+        </sequenceFlow>
+
+        <endEvent id="approvedEnd" name="Approved"/>
+        <endEvent id="rejectedEnd" name="Rejected"/>
+    </process>
+</definitions>

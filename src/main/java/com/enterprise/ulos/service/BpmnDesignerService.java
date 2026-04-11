@@ -80,8 +80,7 @@ public class BpmnDesignerService {
 
     @Transactional(readOnly = true)
     public List<BpmnApiModels.BpmnVersionResponse> listVersions() {
-        return bpmnModelRepository.findAllByOrderByProcessKeyAscVersionDesc()
-                .stream()
+        return bpmnModelRepository.findAllByOrderByProcessKeyAscVersionDesc().stream()
                 .map(model -> new BpmnApiModels.BpmnVersionResponse(
                         model.getId(),
                         model.getProcessKey(),
@@ -163,6 +162,9 @@ public class BpmnDesignerService {
         }
         if (isBlank(request.bpmnXml())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bpmnXml is required");
+        }
+        if (!isBlank(request.processKey()) && !request.bpmnXml().contains(request.processKey())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "processKey does not match BPMN XML payload");
         }
     }
 

@@ -6,12 +6,15 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import com.enterprise.ulos.los.entity.AbstractAuditableEntity;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bpmn_model")
-public class BpmnModelEntity extends AbstractAuditableEntity {
+public class BpmnModelEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,6 +50,12 @@ public class BpmnModelEntity extends AbstractAuditableEntity {
 
     @Column(name = "change_summary", length = 500)
     private String changeSummary;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
     public Long getId() {
         return id;
@@ -130,5 +139,25 @@ public class BpmnModelEntity extends AbstractAuditableEntity {
 
     public void setChangeSummary(String changeSummary) {
         this.changeSummary = changeSummary;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    @PrePersist
+    void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
+    Optional<RoleEntity> findByRoleCode(String roleCode);
 
-    Optional<RoleEntity> findByCode(String code);
-
-    List<RoleEntity> findByCodeIn(Collection<String> codes);
+    List<RoleEntity> findByRoleCodeInAndActiveFlagTrue(Collection<String> roleCodes);
 }

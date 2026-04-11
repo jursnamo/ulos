@@ -1,106 +1,154 @@
 package com.enterprise.ulos.los.service;
 
-import com.enterprise.ulos.los.entity.AppUserEntity;
 import com.enterprise.ulos.los.entity.RoleEntity;
-import com.enterprise.ulos.los.model.AuthApiModels;
-import com.enterprise.ulos.los.repository.AppUserRepository;
+import com.enterprise.ulos.los.entity.UserEntity;
+import com.enterprise.ulos.los.model.UserManagementApiModels;
 import com.enterprise.ulos.los.repository.RoleRepository;
+import com.enterprise.ulos.los.repository.UserRepository;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @Transactional
 public class UserManagementService {
 
-    private final AppUserRepository appUserRepository;
+    private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AuthService authService;
+    private final PasswordHashService passwordHashService;
 
     public UserManagementService(
-            AppUserRepository appUserRepository,
+            UserRepository userRepository,
             RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder,
-            AuthService authService
+            PasswordHashService passwordHashService
     ) {
-        this.appUserRepository = appUserRepository;
+        this.userRepository = userRepository;
         this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.authService = authService;
+        this.passwordHashService = passwordHashService;
     }
 
     @Transactional(readOnly = true)
-    public List<AuthApiModels.UserProfileResponse> listUsers() {
-        return appUserRepository.findAll().stream()
-                .map(authService::toProfile)
-                .sorted((left, right) -> left.username().compareToIgnoreCase(right.username()))
+    public List<UserManagementApiModels.UserResponse> list() {
+        return userRepository.findAll().stream()
+                .sorted(Comparator.comparing(UserEntity::getUsername))
+                .map(this::toResponse)
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public List<AuthApiModels.RoleResponse> listRoles() {
-        return roleRepository.findAll().stream()
-                .map(role -> new AuthApiModels.RoleResponse(
-                        role.getId(),
-                        role.getCode(),
-                        role.getName(),
-                        role.getDescription()
-                ))
-                .sorted((left, right) -> left.code().compareToIgnoreCase(right.code()))
-                .toList();
-    }
-
-    public AuthApiModels.UserProfileResponse saveUser(Long userId, AuthApiModels.UserRequest request) {
-        validateRequest(request, userId == null);
-
-        AppUserEntity user = userId == null
-                ? new AppUserEntity()
-                : appUserRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-        if (userId == null && appUserRepository.findByUsername(request.username()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
+    public UserManagementApiModels.UserResponse create(UserManagementApiModels.UserUpsertRequest request) {
+        validateCreateRequest(request);
+        String username = request.username().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists: " + username);
         }
 
-        user.setUsername(request.username());
-        user.setFullName(request.fullName());
+        UserEntity user = new UserEntity();
+        user.setUsername(username);
+        user.setFullName(request.fullName().trim());
         user.setEmail(request.email());
-        user.setActive(request.active() == null || request.active());
-
-        if (request.password() != null && !request.password().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.password()));
-        } else if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required for new user");
-        }
-
-        Set<RoleEntity> roles = new LinkedHashSet<>(roleRepository.findByCodeIn(defaultRoles(request.roleCodes())));
-        if (roles.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one valid role is required");
-        }
-        user.setRoles(roles);
-
-        return authService.toProfile(appUserRepository.save(user));
+        user.setActiveFlag(request.active() == null || request.active());
+        user.setPasswordHash(passwordHashService.hash(defaultPassword(request.password())));
+        user.setRoles(resolveRoles(request.roles(), true));
+        return toResponse(userRepository.save(user));
     }
 
-    private void validateRequest(AuthApiModels.UserRequest request, boolean creating) {
+    public UserManagementApiModels.UserResponse update(Long userId, UserManagementApiModels.UserUpsertRequest request) {
+        UserEntity user = getEntity(userId);
         if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User request is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User payload is required");
         }
-        if (request.username() == null || request.username().isBlank() || request.fullName() == null || request.fullName().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username and full name are required");
+        if (request.fullName() != null && !request.fullName().isBlank()) {
+            user.setFullName(request.fullName().trim());
         }
-        if (creating && (request.password() == null || request.password().isBlank())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required");
+        if (request.email() != null) {
+            user.setEmail(request.email().isBlank() ? null : request.email().trim());
+        }
+        if (request.active() != null) {
+            user.setActiveFlag(request.active());
+        }
+        if (request.roles() != null) {
+            user.setRoles(resolveRoles(request.roles(), false));
+        }
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPasswordHash(passwordHashService.hash(request.password().trim()));
+        }
+        return toResponse(userRepository.save(user));
+    }
+
+    public UserManagementApiModels.UserResponse resetPassword(Long userId, UserManagementApiModels.PasswordResetRequest request) {
+        if (request == null || request.password() == null || request.password().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password is required");
+        }
+        UserEntity user = getEntity(userId);
+        user.setPasswordHash(passwordHashService.hash(request.password().trim()));
+        return toResponse(userRepository.save(user));
+    }
+
+    private UserEntity getEntity(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId));
+    }
+
+    private Set<RoleEntity> resolveRoles(List<String> roleCodes, boolean fallbackViewer) {
+        Set<String> normalized = new LinkedHashSet<>();
+        if (roleCodes != null) {
+            roleCodes.stream()
+                    .filter(item -> item != null && !item.isBlank())
+                    .map(item -> item.trim().toUpperCase(Locale.ROOT))
+                    .forEach(normalized::add);
+        }
+        if (normalized.isEmpty() && fallbackViewer) {
+            normalized.add("VIEWER");
+        }
+        List<RoleEntity> resolved = roleRepository.findByRoleCodeInAndActiveFlagTrue(normalized);
+        if (resolved.size() != normalized.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role code(s): " + normalized);
+        }
+        return new LinkedHashSet<>(resolved);
+    }
+
+    private void validateCreateRequest(UserManagementApiModels.UserUpsertRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User payload is required");
+        }
+        if (request.username() == null || request.username().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "username is required");
+        }
+        if (request.fullName() == null || request.fullName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fullName is required");
         }
     }
 
-    private List<String> defaultRoles(List<String> roleCodes) {
-        return roleCodes == null || roleCodes.isEmpty() ? List.of("RM") : roleCodes;
+    private String defaultPassword(String requestedPassword) {
+        if (requestedPassword != null && !requestedPassword.isBlank()) {
+            return requestedPassword.trim();
+        }
+        return "Temp-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private UserManagementApiModels.UserResponse toResponse(UserEntity user) {
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getRoleCode().toUpperCase(Locale.ROOT))
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        return new UserManagementApiModels.UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getEmail(),
+                user.isActiveFlag(),
+                roles,
+                user.getLastLoginAt(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
+        );
     }
 }

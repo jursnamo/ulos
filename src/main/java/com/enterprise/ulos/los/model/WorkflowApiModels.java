@@ -8,20 +8,13 @@ public final class WorkflowApiModels {
     private WorkflowApiModels() {
     }
 
-    public record TaskDecisionRequest(
-            String decision,
-            String decisionNotes,
-            String decidedBy
-    ) {
-    }
-
     public record WorkflowLaunchResponse(
             String applicationId,
             String processInstanceId,
             String processDefinitionKey,
             String businessKey,
             String workflowStatus,
-            String currentApprovalTier
+            String currentStage
     ) {
     }
 
@@ -36,11 +29,18 @@ public final class WorkflowApiModels {
             String companyName,
             BigDecimal proposedExposure,
             String workflowStatus,
-            String approvalTier
+            String approvalStage
     ) {
     }
 
-    public record ApprovalHistoryItem(
+    public record TaskDecisionRequest(
+            String decision,
+            String decidedBy,
+            String decisionNotes
+    ) {
+    }
+
+    public record WorkflowHistoryItem(
             String stage,
             String decision,
             String actor,
@@ -53,13 +53,11 @@ public final class WorkflowApiModels {
             long totalCustomers,
             long totalApplications,
             long draftApplications,
-            long inReviewApplications,
+            long underReviewApplications,
             long approvedApplications,
             long rejectedApplications,
-            long hardStopApplications,
             long openTasks,
-            BigDecimal totalProposedExposure,
-            long pendingTboCount
+            BigDecimal totalExposure
     ) {
     }
 }

@@ -14,40 +14,25 @@ public final class AuthApiModels {
     ) {
     }
 
-    public record LoginResponse(
-            String accessToken,
-            String tokenType,
-            UserProfileResponse user
-    ) {
-    }
-
-    public record UserRequest(
-            String username,
-            String password,
-            String fullName,
-            String email,
-            Boolean active,
-            List<String> roleCodes
-    ) {
-    }
-
     public record UserProfileResponse(
-            Long id,
+            Long userId,
             String username,
             String fullName,
             String email,
             boolean active,
-            List<String> roles,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            List<String> roles
     ) {
     }
 
-    public record RoleResponse(
-            Long id,
-            String code,
-            String name,
-            String description
+    public record LoginResponse(
+            String token,
+            LocalDateTime expiresAt,
+            UserProfileResponse user
+    ) {
+    }
+
+    public record LogoutResponse(
+            boolean success
     ) {
     }
 }

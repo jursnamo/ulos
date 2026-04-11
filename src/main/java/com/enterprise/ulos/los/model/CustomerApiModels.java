@@ -1,171 +1,62 @@
 package com.enterprise.ulos.los.model;
 
-import java.math.BigDecimal;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 public final class CustomerApiModels {
 
     private CustomerApiModels() {
     }
 
-    public record CustomerPortfolioRequest(
+    public record CustomerRequest(
             String cifNumber,
             String companyName,
+            String legalName,
             String companyType,
-            LocalDate dateOfEstablishment,
-            String placeOfEstablishment,
+            LocalDate registrationDate,
             String taxId,
-            String businessLicense,
-            String officeAddress,
-            String factoryAddress,
-            List<KeyManagementItem> keyManagement,
-            List<ShareholderItem> shareholders,
-            List<RelatedPartyItem> relatedParties,
-            List<FinancialStatementItem> financialStatements,
-            List<FinancialStatementItem> consolidatedFinancialStatements,
-            List<BankStatementItem> bankStatements,
-            List<SupplierItem> suppliers,
-            List<BuyerItem> buyers,
-            List<CompetitorItem> competitors
-    ) {
-    }
-
-    public record CustomerPortfolioResponse(
-            String cifNumber,
-            String companyName,
-            String companyType,
-            LocalDate dateOfEstablishment,
-            String placeOfEstablishment,
-            String taxId,
-            String businessLicense,
-            String officeAddress,
-            String factoryAddress,
-            List<KeyManagementItem> keyManagement,
-            List<ShareholderItem> shareholders,
-            List<RelatedPartyItem> relatedParties,
-            List<FinancialStatementItem> financialStatements,
-            List<FinancialStatementItem> consolidatedFinancialStatements,
-            List<FinancialStatementAnalysis> quantitativeAnalyses,
-            List<FinancialStatementAnalysis> consolidatedQuantitativeAnalyses,
-            List<BankStatementItem> bankStatements,
-            List<SupplierItem> suppliers,
-            List<BuyerItem> buyers,
-            List<CompetitorItem> competitors,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            String sector,
+            String location,
+            String status,
+            JsonNode profileData
     ) {
     }
 
     public record CustomerSummaryResponse(
             String cifNumber,
             String companyName,
-            String companyType
+            String sector,
+            String location,
+            String status,
+            LocalDateTime updatedAt
     ) {
     }
 
-    public record KeyManagementItem(
-            String name,
-            String nationalIdNumber,
-            String title
+    public record CustomerSummaryPageResponse(
+            java.util.List<CustomerSummaryResponse> items,
+            long totalElements,
+            int totalPages,
+            int page,
+            int size
     ) {
     }
 
-    public record ShareholderItem(
-            String name,
-            BigDecimal ownershipPercentage,
-            BigDecimal shareNominal
-    ) {
-    }
-
-    public record RelatedPartyItem(
-            String relationType,
-            String name,
-            String identityNumber,
-            String contactDetails,
-            String address
-    ) {
-    }
-
-    public record FinancialStatementItem(
-            String statementId,
-            String period,
-            String auditStatus,
-            String auditorName,
-            String groupHoldingName,
-            BigDecimal cash,
-            BigDecimal accountsReceivable,
-            BigDecimal inventory,
-            BigDecimal fixedAssets,
-            BigDecimal accountsPayable,
-            BigDecimal shortTermLoan,
-            BigDecimal longTermLoan,
-            BigDecimal totalEquity,
-            BigDecimal salesRevenue,
-            BigDecimal cogs,
-            BigDecimal grossProfit,
-            BigDecimal operatingExpenses,
-            BigDecimal ebitda,
-            BigDecimal interestExpense,
-            BigDecimal netIncome,
-            BigDecimal intercompanyElimination
-    ) {
-    }
-
-    public record FinancialStatementAnalysis(
-            String statementId,
-            String period,
-            String groupHoldingName,
-            QuantitativeAnalysisSnapshot analysis
-    ) {
-    }
-
-    public record QuantitativeAnalysisSnapshot(
-            BigDecimal currentRatio,
-            BigDecimal quickRatio,
-            BigDecimal debtToEquityRatio,
-            BigDecimal interestCoverageRatio,
-            BigDecimal returnOnAssets,
-            BigDecimal returnOnEquity,
-            BigDecimal grossProfitMargin,
-            BigDecimal netProfitMargin,
-            BigDecimal arDays,
-            BigDecimal inventoryDays,
-            BigDecimal apDays,
-            BigDecimal cashConversionCycle
-    ) {
-    }
-
-    public record BankStatementItem(
-            String bankName,
-            String accountNumber,
-            String period,
-            BigDecimal totalInflow,
-            BigDecimal totalOutflow,
-            BigDecimal averageBalance,
-            Integer chequeReturnCount,
-            BigDecimal chequeReturnNominal
-    ) {
-    }
-
-    public record SupplierItem(
-            String supplierName,
-            BigDecimal purchasePercentage,
-            Integer paymentTermsDays
-    ) {
-    }
-
-    public record BuyerItem(
-            String buyerName,
-            BigDecimal salesPercentage,
-            Integer paymentTermsDays
-    ) {
-    }
-
-    public record CompetitorItem(
-            String competitorName,
-            BigDecimal estimatedMarketShare
+    public record CustomerDetailResponse(
+            Long id,
+            String cifNumber,
+            String companyName,
+            String legalName,
+            String companyType,
+            LocalDate registrationDate,
+            String taxId,
+            String sector,
+            String location,
+            String status,
+            JsonNode profileData,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
     ) {
     }
 }

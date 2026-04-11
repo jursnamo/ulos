@@ -1,8 +1,8 @@
 package com.enterprise.ulos.los.controller;
 
-import com.enterprise.ulos.los.model.AuthApiModels;
+import com.enterprise.ulos.los.model.UserManagementApiModels;
+import com.enterprise.ulos.los.security.RequiresRoles;
 import com.enterprise.ulos.los.service.UserManagementService;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
-@PreAuthorize("hasRole('ADMIN')")
+@RequestMapping("/api/admin/users")
+@RequiresRoles({"ADMIN"})
 public class UserManagementController {
 
     private final UserManagementService userManagementService;
@@ -25,22 +25,28 @@ public class UserManagementController {
     }
 
     @GetMapping
-    public List<AuthApiModels.UserProfileResponse> listUsers() {
-        return userManagementService.listUsers();
-    }
-
-    @GetMapping("/roles")
-    public List<AuthApiModels.RoleResponse> listRoles() {
-        return userManagementService.listRoles();
+    public List<UserManagementApiModels.UserResponse> list() {
+        return userManagementService.list();
     }
 
     @PostMapping
-    public AuthApiModels.UserProfileResponse createUser(@RequestBody AuthApiModels.UserRequest request) {
-        return userManagementService.saveUser(null, request);
+    public UserManagementApiModels.UserResponse create(@RequestBody UserManagementApiModels.UserUpsertRequest request) {
+        return userManagementService.create(request);
     }
 
     @PutMapping("/{userId}")
-    public AuthApiModels.UserProfileResponse updateUser(@PathVariable Long userId, @RequestBody AuthApiModels.UserRequest request) {
-        return userManagementService.saveUser(userId, request);
+    public UserManagementApiModels.UserResponse update(
+            @PathVariable Long userId,
+            @RequestBody UserManagementApiModels.UserUpsertRequest request
+    ) {
+        return userManagementService.update(userId, request);
+    }
+
+    @PutMapping("/{userId}/password")
+    public UserManagementApiModels.UserResponse resetPassword(
+            @PathVariable Long userId,
+            @RequestBody UserManagementApiModels.PasswordResetRequest request
+    ) {
+        return userManagementService.resetPassword(userId, request);
     }
 }
