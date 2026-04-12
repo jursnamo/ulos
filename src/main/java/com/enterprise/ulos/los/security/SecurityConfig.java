@@ -35,6 +35,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/system/routes").permitAll()
+                        .requestMatchers("/api/master/portfolio-lookups/**").permitAll()
+                        .requestMatchers("/api/public/editor-images/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )

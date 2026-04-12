@@ -19,10 +19,10 @@ public class JwtService {
     private final long expirationSeconds;
 
     public JwtService(
-            @Value("${app.security.jwt-secret}") String secret,
-            @Value("${app.security.jwt-expiration-seconds}") long expirationSeconds
+            @Value("${app.security.jwt-secret:ulos-local-dev-jwt-secret-key-2026-please-change}") String secret,
+            @Value("${app.security.jwt-expiration-seconds:36000}") long expirationSeconds
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.secretKey = Keys.hmacShaKeyFor(normalizeSecret(secret).getBytes(StandardCharsets.UTF_8));
         this.expirationSeconds = expirationSeconds;
     }
 
@@ -60,5 +60,17 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private String normalizeSecret(String secret) {
+        String value = secret == null ? "" : secret.trim();
+        if (value.length() >= 32) {
+            return value;
+        }
+        StringBuilder builder = new StringBuilder(value);
+        while (builder.length() < 32) {
+            builder.append("0");
+        }
+        return builder.toString();
     }
 }

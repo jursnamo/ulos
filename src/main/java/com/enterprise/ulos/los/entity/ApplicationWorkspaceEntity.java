@@ -79,6 +79,12 @@ public class ApplicationWorkspaceEntity extends AuditableEntity {
     @Column(name = "slik_json", columnDefinition = "LONGTEXT")
     private String slikJson;
 
+    @Column(name = "linked_slik_check_ref", length = 80)
+    private String linkedSlikCheckRef;
+
+    @Column(name = "linked_collateral_check_ref", length = 80)
+    private String linkedCollateralCheckRef;
+
     @Column(name = "remarks", columnDefinition = "LONGTEXT")
     private String remarks;
 
@@ -247,6 +253,22 @@ public class ApplicationWorkspaceEntity extends AuditableEntity {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    public String getLinkedSlikCheckRef() {
+        return linkedSlikCheckRef;
+    }
+
+    public void setLinkedSlikCheckRef(String linkedSlikCheckRef) {
+        this.linkedSlikCheckRef = linkedSlikCheckRef;
+    }
+
+    public String getLinkedCollateralCheckRef() {
+        return linkedCollateralCheckRef;
+    }
+
+    public void setLinkedCollateralCheckRef(String linkedCollateralCheckRef) {
+        this.linkedCollateralCheckRef = linkedCollateralCheckRef;
     }
 
     public LocalDateTime getSubmittedAt() {

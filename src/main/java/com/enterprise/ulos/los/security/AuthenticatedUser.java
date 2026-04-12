@@ -25,7 +25,7 @@ public class AuthenticatedUser implements UserDetails {
         this.active = user.isActive();
         this.fullName = user.getFullName();
         this.roles = user.getRoles().stream()
-                .map(role -> role.getCode())
+                .map(role -> role.getRoleCode())
                 .distinct()
                 .sorted()
                 .toList();

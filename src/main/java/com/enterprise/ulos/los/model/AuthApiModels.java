@@ -14,6 +14,16 @@ public final class AuthApiModels {
     ) {
     }
 
+    public record UserRequest(
+            String username,
+            String password,
+            String fullName,
+            String email,
+            Boolean active,
+            List<String> roles
+    ) {
+    }
+
     public record UserProfileResponse(
             Long userId,
             String username,

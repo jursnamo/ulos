@@ -2,6 +2,7 @@ package com.enterprise.ulos.los.service;
 
 import com.enterprise.ulos.los.entity.RoleEntity;
 import com.enterprise.ulos.los.entity.UserEntity;
+import com.enterprise.ulos.los.model.AuthApiModels;
 import com.enterprise.ulos.los.model.UserManagementApiModels;
 import com.enterprise.ulos.los.repository.RoleRepository;
 import com.enterprise.ulos.los.repository.UserRepository;
@@ -41,6 +42,24 @@ public class UserManagementService {
                 .sorted(Comparator.comparing(UserEntity::getUsername))
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public UserManagementApiModels.UserResponse saveUser(Long userId, AuthApiModels.UserRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User payload is required");
+        }
+        UserManagementApiModels.UserUpsertRequest payload = new UserManagementApiModels.UserUpsertRequest(
+                request.username(),
+                request.fullName(),
+                request.email(),
+                request.password(),
+                request.active(),
+                request.roles()
+        );
+        if (userId == null) {
+            return create(payload);
+        }
+        return update(userId, payload);
     }
 
     public UserManagementApiModels.UserResponse create(UserManagementApiModels.UserUpsertRequest request) {

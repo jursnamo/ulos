@@ -1,12 +1,16 @@
 package com.enterprise.ulos.los.config;
 
 import com.enterprise.ulos.domain.bpmn.BpmnModelEntity;
+import com.enterprise.ulos.los.entity.CustomerEntity;
+import com.enterprise.ulos.los.entity.PrecheckSessionEntity;
 import com.enterprise.ulos.los.model.ApplicationApiModels;
 import com.enterprise.ulos.los.model.AuthApiModels;
 import com.enterprise.ulos.los.model.CustomerApiModels;
 import com.enterprise.ulos.los.repository.AppUserRepository;
 import com.enterprise.ulos.los.repository.CreditApplicationRepository;
+import com.enterprise.ulos.los.repository.CustomerRepository;
 import com.enterprise.ulos.los.repository.CustomerPortfolioRepository;
+import com.enterprise.ulos.los.repository.PrecheckSessionRepository;
 import com.enterprise.ulos.repository.BpmnModelRepository;
 import com.enterprise.ulos.los.service.CorporateApprovalWorkflowService;
 import com.enterprise.ulos.los.service.CreditApplicationService;
@@ -22,6 +26,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Configuration
@@ -29,6 +34,7 @@ public class LosDemoDataInitializer {
 
     private static final String SAMPLE_CIF = "CIF-ENT-001";
     private static final String SAMPLE_APPLICATION_ID = "APP-ENT-001";
+    private static final String SEED_REF_DATE = "20260412";
 
     @Bean
     CommandLineRunner seedDemoData(
@@ -36,6 +42,8 @@ public class LosDemoDataInitializer {
             AppUserRepository appUserRepository,
             CustomerPortfolioRepository customerPortfolioRepository,
             CreditApplicationRepository creditApplicationRepository,
+            PrecheckSessionRepository precheckSessionRepository,
+            CustomerRepository customerRepository,
             CustomerPortfolioService customerPortfolioService,
             CreditApplicationService creditApplicationService,
             CorporateApprovalWorkflowService corporateApprovalWorkflowService,
@@ -46,6 +54,7 @@ public class LosDemoDataInitializer {
             seedUsers(userManagementService, appUserRepository);
             ensureSampleCustomer(customerPortfolioRepository, customerPortfolioService);
             ensureSampleApplication(creditApplicationRepository, creditApplicationService);
+            ensureSamplePrechecks(precheckSessionRepository, customerRepository);
             ensureSampleWorkflow(creditApplicationRepository, corporateApprovalWorkflowService);
             seedBpmnRegistry(bpmnModelRepository, repositoryService, "corporateCreditApproval", "System bootstrap");
             seedBpmnRegistry(bpmnModelRepository, repositoryService, "loanApproval", "System bootstrap");
@@ -212,6 +221,570 @@ public class LosDemoDataInitializer {
                 .filter(application -> (application.getProcessInstanceId() == null || application.getProcessInstanceId().isBlank())
                         && "DRAFT".equalsIgnoreCase(application.getWorkflowStatus()))
                 .ifPresent(application -> corporateApprovalWorkflowService.launch(application.getApplicationId()));
+    }
+
+    private void ensureSamplePrechecks(
+            PrecheckSessionRepository precheckSessionRepository,
+            CustomerRepository customerRepository
+    ) {
+        List<CustomerEntity> customers = customerRepository.findAll()
+                .stream()
+                .filter(customer -> customer.getCifNumber() != null && !customer.getCifNumber().isBlank())
+                .sorted((left, right) -> left.getCifNumber().compareToIgnoreCase(right.getCifNumber()))
+                .limit(10)
+                .toList();
+
+        if (customers.isEmpty()) {
+            return;
+        }
+
+        for (int index = 0; index < customers.size(); index++) {
+            seedPrecheckPackForCustomer(precheckSessionRepository, customers.get(index), index + 1);
+        }
+    }
+
+    private void seedPrecheckPackForCustomer(
+            PrecheckSessionRepository precheckSessionRepository,
+            CustomerEntity customer,
+            int ordinal
+    ) {
+        String token = customerToken(customer, ordinal);
+        LocalDateTime now = LocalDateTime.now().minusHours((long) ordinal * 3);
+        String linkedAppId = SAMPLE_CIF.equalsIgnoreCase(customer.getCifNumber()) ? SAMPLE_APPLICATION_ID : null;
+        String customerName = safe(customer.getCompanyName(), "Unknown Customer");
+
+        upsertPrecheck(
+                precheckSessionRepository,
+                customer,
+                "SLIK-" + SEED_REF_DATE + "-" + token + "-01",
+                "SLIK",
+                "COMPLETED",
+                now.minusDays(8),
+                now.minusDays(8).plusMinutes(26),
+                "SLIK selesai - profil pembayaran baik, collectibility mayoritas 1",
+                sampleSlikCompletedResult(customer, token, 1),
+                linkedAppId,
+                "Seeded SLIK completed (batch 1) for " + customerName
+        );
+
+        upsertPrecheck(
+                precheckSessionRepository,
+                customer,
+                "SLIK-" + SEED_REF_DATE + "-" + token + "-02",
+                "SLIK",
+                "COMPLETED",
+                now.minusDays(3),
+                now.minusDays(3).plusMinutes(14),
+                "SLIK re-check selesai - terdapat perbaikan DPD dibanding periode sebelumnya",
+                sampleSlikCompletedResult(customer, token, 2),
+                linkedAppId,
+                "Seeded SLIK completed (batch 2) for " + customerName
+        );
+
+        upsertPrecheck(
+                precheckSessionRepository,
+                customer,
+                "SLIK-" + SEED_REF_DATE + "-" + token + "-03",
+                "SLIK",
+                "IN_PROGRESS",
+                now.minusHours(12),
+                null,
+                "SLIK request sedang diproses oleh bureau",
+                sampleSlikInProgressResult(customer, token),
+                null,
+                "Seeded SLIK in-progress request for " + customerName
+        );
+
+        upsertPrecheck(
+                precheckSessionRepository,
+                customer,
+                "COLLATERAL-" + SEED_REF_DATE + "-" + token + "-01",
+                "COLLATERAL",
+                "COMPLETED",
+                now.minusDays(5),
+                now.minusDays(5).plusMinutes(43),
+                "Appraisal selesai - nilai agunan tervalidasi",
+                sampleCollateralCompletedResult(customer, token, 1),
+                linkedAppId,
+                "Seeded collateral completed (batch 1) for " + customerName
+        );
+
+        upsertPrecheck(
+                precheckSessionRepository,
+                customer,
+                "COLLATERAL-" + SEED_REF_DATE + "-" + token + "-02",
+                "COLLATERAL",
+                "COMPLETED",
+                now.minusDays(2),
+                now.minusDays(2).plusMinutes(38),
+                "Appraisal re-check selesai untuk update market value",
+                sampleCollateralCompletedResult(customer, token, 2),
+                linkedAppId,
+                "Seeded collateral completed (batch 2) for " + customerName
+        );
+
+        upsertPrecheck(
+                precheckSessionRepository,
+                customer,
+                "COLLATERAL-" + SEED_REF_DATE + "-" + token + "-03",
+                "COLLATERAL",
+                "REQUESTED",
+                now.minusHours(4),
+                null,
+                "Request appraisal baru sedang menunggu penilai",
+                sampleCollateralRequestedResult(customer, token),
+                null,
+                "Seeded collateral requested for " + customerName
+        );
+    }
+
+    private void upsertPrecheck(
+            PrecheckSessionRepository precheckSessionRepository,
+            CustomerEntity customer,
+            String checkRef,
+            String checkType,
+            String status,
+            LocalDateTime requestedAt,
+            LocalDateTime completedAt,
+            String summary,
+            String resultJson,
+            String linkedApplicationId,
+            String notes
+    ) {
+        PrecheckSessionEntity entity = precheckSessionRepository.findByCheckRef(checkRef).orElseGet(PrecheckSessionEntity::new);
+        entity.setCheckRef(checkRef);
+        entity.setCheckType(checkType);
+        entity.setCustomer(customer);
+        entity.setStatus(status);
+        entity.setRequestedAt(requestedAt);
+        entity.setCompletedAt(completedAt);
+        entity.setResultSummary(summary);
+        entity.setResultJson(resultJson);
+        entity.setLinkedApplicationId(linkedApplicationId);
+        entity.setNotes(notes);
+        precheckSessionRepository.save(entity);
+    }
+
+    private String sampleSlikCompletedResult(CustomerEntity customer, String token, int variant) {
+        String companyName = jsonEscape(safe(customer.getCompanyName(), "Unknown Company"));
+        String companyTax = jsonEscape(safe(customer.getTaxId(), safe(customer.getCifNumber(), "UNKNOWN-ID")));
+        String companyAddress = jsonEscape(safe(customer.getLocation(), "Jakarta"));
+        String refMain = "A-" + token;
+        String refDirector = "P-" + token + "01";
+        String refCommissioner = "P-" + token + "02";
+        String refShareholder = "G-" + token + "03";
+        String riskFlag = variant == 1 ? "Low" : "Moderate";
+        String maxDpd = variant == 1 ? "1" : "7";
+        String collectibility = variant == 1 ? "1" : "2";
+        String outstandingMain = variant == 1 ? "4000" : "4300";
+        String monthlyObligation = variant == 1 ? "33" : "36";
+
+        return """
+                {
+                  "subjects": [
+                    {
+                      "id": "SLIK-SUB-001",
+                      "refNum": "%s",
+                      "debtorType": "A",
+                      "name": "%s",
+                      "gender": "",
+                      "dob": "2012-05-14",
+                      "pob": "Jakarta",
+                      "ktp": "",
+                      "npwp": "%s",
+                      "isCompany": "1",
+                      "motherName": "",
+                      "address": "%s",
+                      "city": "%s",
+                      "zipCode": "12940",
+                      "isBatch": "0",
+                      "reqPurpose": "00",
+                      "facilities": [
+                        {
+                          "bankInstitution": "PT Bank Jtrust Indonesia d/h Bank Mutiara",
+                          "facility": "Modal Kerja",
+                          "revolvingTerm": "Revolving",
+                          "initialLimit": "2000",
+                          "osIdrMio": "%s",
+                          "interestPct": "8.50",
+                          "monthlyObligationIdrMio": "%s",
+                          "collectability": "%s",
+                          "facilitySince": "2022-01-01",
+                          "startDate": "2022-01-01",
+                          "endDate": "2026-12-31",
+                          "maturity": "2026-12-31",
+                          "currency": "IDR",
+                          "facilityStatus": "ACTIVE",
+                          "restructured": "No",
+                          "restructuredFreq": "0",
+                          "maxDpd24MonthLatest": "%s",
+                          "tenorMonths": "60",
+                          "notes": "Pembayaran lancar."
+                        },
+                        {
+                          "bankInstitution": "PT Bank CIMB Niaga Tbk",
+                          "facility": "Modal Kerja",
+                          "revolvingTerm": "Revolving",
+                          "initialLimit": "2000",
+                          "osIdrMio": "%s",
+                          "interestPct": "10.00",
+                          "monthlyObligationIdrMio": "%s",
+                          "collectability": "%s",
+                          "facilitySince": "2021-04-10",
+                          "startDate": "2021-04-10",
+                          "endDate": "2027-04-10",
+                          "maturity": "2027-04-10",
+                          "currency": "IDR",
+                          "facilityStatus": "ACTIVE",
+                          "restructured": "No",
+                          "restructuredFreq": "0",
+                          "maxDpd24MonthLatest": "%s",
+                          "tenorMonths": "72",
+                          "notes": "Exposure terbesar pada modal kerja."
+                        }
+                      ],
+                      "collaterals": [
+                        {
+                          "jenisAgunanKe": "Tanah dan Bangunan",
+                          "nomorAgunan": "COL-SLIK-001",
+                          "nilaiAgunanMenurutLJK": "25000",
+                          "prosentaseParipasu": "100",
+                          "tanggalUpdate": "2026-04-08",
+                          "jenisPengikatan": "SHGB",
+                          "jenisPengikatanKet": "Akta Hak Tanggungan",
+                          "tanggalPengikatan": "2023-07-15",
+                          "namaPemilikAgunan": "%s",
+                          "alamatAgunan": "%s",
+                          "kabKotaLokasiAgunan": "Karawang",
+                          "kabKotaLokasiAgunanKet": "Jawa Barat",
+                          "tglPenilaianPelapor": "2026-04-07",
+                          "peringkatAgunan": "A",
+                          "kodeLembagaPemeringkat": "KJPP-01",
+                          "lembagaPemeringkat": "KJPP Mitra Penilai",
+                          "buktiKepemilikan": "SHGB 8877",
+                          "nilaiAgunanNjop": "22000",
+                          "nilaiAgunanIndep": "24000",
+                          "namaPenilaiIndep": "Mitra Penilai",
+                          "asuransi": "Asuransi Properti Nusantara",
+                          "tanggalPenilaianPenilaiIndependen": "2026-04-07",
+                          "keterangan": "Agunan utama untuk fasilitas modal kerja."
+                        }
+                      ]
+                    },
+                    {
+                      "id": "SLIK-SUB-002",
+                      "refNum": "%s",
+                      "debtorType": "P",
+                      "name": "Ayu Saraswati",
+                      "gender": "Female",
+                      "dob": "1987-09-19",
+                      "pob": "Bandung",
+                      "ktp": "3175XXXXXXXXXXXX",
+                      "npwp": "12.345.678.9-111.000",
+                      "isCompany": "0",
+                      "motherName": "Dewi Pranoto",
+                      "address": "Menteng Dalam, Jakarta Selatan",
+                      "city": "Jakarta Selatan",
+                      "zipCode": "12870",
+                      "isBatch": "0",
+                      "reqPurpose": "00",
+                      "facilities": [
+                        {
+                          "bankInstitution": "PT Bank Hibank Indonesia",
+                          "facility": "Kartu Kredit",
+                          "revolvingTerm": "Revolving",
+                          "initialLimit": "200",
+                          "osIdrMio": "55",
+                          "interestPct": "2.25",
+                          "monthlyObligationIdrMio": "6",
+                          "collectability": "1",
+                          "facilitySince": "2020-01-18",
+                          "startDate": "2020-01-18",
+                          "endDate": "2028-01-18",
+                          "maturity": "2028-01-18",
+                          "currency": "IDR",
+                          "facilityStatus": "ACTIVE",
+                          "restructured": "No",
+                          "restructuredFreq": "0",
+                          "maxDpd24MonthLatest": "0",
+                          "tenorMonths": "96",
+                          "notes": "Tagihan kartu kredit rutin."
+                        }
+                      ],
+                      "collaterals": []
+                    },
+                    {
+                      "id": "SLIK-SUB-003",
+                      "refNum": "%s",
+                      "debtorType": "P",
+                      "name": "Raka Mahendra",
+                      "gender": "Male",
+                      "dob": "1983-04-22",
+                      "pob": "Surabaya",
+                      "ktp": "3174XXXXXXXXXXXX",
+                      "npwp": "11.223.344.5-666.000",
+                      "isCompany": "0",
+                      "motherName": "Ratna Wibowo",
+                      "address": "Kemang Timur, Jakarta Selatan",
+                      "city": "Jakarta Selatan",
+                      "zipCode": "12730",
+                      "isBatch": "0",
+                      "reqPurpose": "00",
+                      "facilities": [
+                        {
+                          "bankInstitution": "PT Bank Danamon Indonesia",
+                          "facility": "Kredit Multiguna",
+                          "revolvingTerm": "Term",
+                          "initialLimit": "850",
+                          "osIdrMio": "390",
+                          "interestPct": "11.50",
+                          "monthlyObligationIdrMio": "11",
+                          "collectability": "1",
+                          "facilitySince": "2022-07-01",
+                          "startDate": "2022-07-01",
+                          "endDate": "2028-06-30",
+                          "maturity": "2028-06-30",
+                          "currency": "IDR",
+                          "facilityStatus": "ACTIVE",
+                          "restructured": "No",
+                          "restructuredFreq": "0",
+                          "maxDpd24MonthLatest": "0",
+                          "tenorMonths": "72",
+                          "notes": "Kredit personal untuk aset produktif."
+                        }
+                      ],
+                      "collaterals": []
+                    },
+                    {
+                      "id": "SLIK-SUB-004",
+                      "refNum": "%s",
+                      "debtorType": "G",
+                      "name": "PT Nusantara Group Holding",
+                      "gender": "",
+                      "dob": "2008-03-11",
+                      "pob": "Jakarta",
+                      "ktp": "",
+                      "npwp": "09.887.766.5-123.000",
+                      "isCompany": "1",
+                      "motherName": "",
+                      "address": "Sudirman Central District",
+                      "city": "Jakarta Pusat",
+                      "zipCode": "10220",
+                      "isBatch": "0",
+                      "reqPurpose": "00",
+                      "facilities": [
+                        {
+                          "bankInstitution": "PT Bank Negara Indonesia Tbk",
+                          "facility": "Bank Garansi",
+                          "revolvingTerm": "Revolving",
+                          "initialLimit": "5000",
+                          "osIdrMio": "1200",
+                          "interestPct": "2.80",
+                          "monthlyObligationIdrMio": "8",
+                          "collectability": "1",
+                          "facilitySince": "2021-01-10",
+                          "startDate": "2021-01-10",
+                          "endDate": "2026-12-31",
+                          "maturity": "2026-12-31",
+                          "currency": "IDR",
+                          "facilityStatus": "ACTIVE",
+                          "restructured": "No",
+                          "restructuredFreq": "0",
+                          "maxDpd24MonthLatest": "0",
+                          "tenorMonths": "72",
+                          "notes": "Fasilitas non-funded untuk proyek EPC."
+                        }
+                      ],
+                      "collaterals": []
+                    }
+                  ],
+                  "summary": {
+                    "totalFacility": 11,
+                    "activeFacility": 7,
+                    "maxCollectibilityKol": %s,
+                    "maxDpdLast24Months": %s,
+                    "estimatedMonthlyObligationIdrMio": %s,
+                    "riskFlag": "%s"
+                  }
+                }
+                """.formatted(
+                refMain,
+                companyName,
+                companyTax,
+                companyAddress,
+                companyAddress,
+                variant == 1 ? "0" : "250",
+                variant == 1 ? "0" : "2400",
+                collectibility,
+                maxDpd,
+                outstandingMain,
+                monthlyObligation,
+                collectibility,
+                maxDpd,
+                companyName,
+                companyAddress,
+                refDirector,
+                refCommissioner,
+                refShareholder,
+                collectibility,
+                maxDpd,
+                monthlyObligation,
+                riskFlag
+        );
+    }
+
+    private String sampleSlikInProgressResult(CustomerEntity customer, String token) {
+        String companyName = jsonEscape(safe(customer.getCompanyName(), "Unknown Company"));
+        String companyTax = jsonEscape(safe(customer.getTaxId(), safe(customer.getCifNumber(), "UNKNOWN-ID")));
+        return """
+                {
+                  "subjects": [
+                    {
+                      "id": "SLIK-SUB-REQ-001",
+                      "refNum": "A-%s",
+                      "debtorType": "A",
+                      "name": "%s",
+                      "idType": "NPWP",
+                      "idNo": "%s",
+                      "status": "Requested",
+                      "lastInquiryDate": "2026-04-11"
+                    },
+                    {
+                      "id": "SLIK-SUB-REQ-002",
+                      "refNum": "P-%s11",
+                      "debtorType": "P",
+                      "name": "Dewi Lestari",
+                      "idType": "KTP",
+                      "idNo": "3173XXXXXXXXXXXX",
+                      "status": "Requested",
+                      "lastInquiryDate": "2026-04-11"
+                    }
+                  ],
+                  "summary": {
+                    "riskFlag": "Pending",
+                    "notes": "Waiting for bureau response."
+                  }
+                }
+                """.formatted(token, companyName, companyTax, token);
+    }
+
+    private String sampleCollateralCompletedResult(CustomerEntity customer, String token, int variant) {
+        String companyName = jsonEscape(safe(customer.getCompanyName(), "Unknown Company"));
+        String city = jsonEscape(safe(customer.getLocation(), "Jakarta"));
+        String buildingValue = variant == 1 ? "25000" : "26800";
+        String buildingEligible = variant == 1 ? "19000" : "20500";
+        String machineValue = variant == 1 ? "6800" : "7000";
+        String machineEligible = variant == 1 ? "4760" : "4900";
+        return """
+                {
+                  "collaterals": [
+                    {
+                      "id": "COL-DET-%s-01",
+                      "code": "COL-%s-01",
+                      "collateralType": "Land & Building",
+                      "description": "Factory and warehouse for %s",
+                      "ownershipType": "Borrower-owned",
+                      "currency": "IDR",
+                      "marketValue": "%s",
+                      "eligibleValue": "%s",
+                      "haircut": "24",
+                      "notes": "Independent valuer confirms good marketability.",
+                      "jenisAgunanKe": "Tanah dan Bangunan",
+                      "nomorAgunan": "COL-%s-01",
+                      "nilaiAgunanMenurutLJK": "%s",
+                      "prosentaseParipasu": "100",
+                      "tanggalUpdate": "2026-04-09",
+                      "jenisPengikatan": "SHGB",
+                      "jenisPengikatanKet": "Akta Hak Tanggungan",
+                      "tanggalPengikatan": "2023-07-15",
+                      "namaPemilikAgunan": "%s",
+                      "alamatAgunan": "Industrial Estate %s",
+                      "kabKotaLokasiAgunan": "%s",
+                      "kabKotaLokasiAgunanKet": "Jawa Barat",
+                      "tglPenilaianPelapor": "2026-04-08",
+                      "peringkatAgunan": "A",
+                      "kodeLembagaPemeringkat": "KJPP-01",
+                      "lembagaPemeringkat": "KJPP Mitra Penilai",
+                      "buktiKepemilikan": "SHGB 8877",
+                      "nilaiAgunanNjop": "22000",
+                      "nilaiAgunanIndep": "24000",
+                      "namaPenilaiIndep": "Mitra Penilai",
+                      "asuransi": "Asuransi Properti Nusantara",
+                      "tanggalPenilaianPenilaiIndependen": "2026-04-08",
+                      "keterangan": "Collateral eligible for primary coverage."
+                    },
+                    {
+                      "id": "COL-DET-%s-02",
+                      "code": "COL-%s-02",
+                      "collateralType": "Machine",
+                      "description": "Hot rolling production line",
+                      "ownershipType": "Borrower-owned",
+                      "currency": "IDR",
+                      "marketValue": "%s",
+                      "eligibleValue": "%s",
+                      "haircut": "30",
+                      "notes": "Machinery insured and in good condition."
+                    }
+                  ],
+                  "summary": {
+                    "totalMarketValueIdrMio": %s,
+                    "totalEligibleValueIdrMio": %s,
+                    "riskFlag": "Moderate"
+                  }
+                }
+                """.formatted(
+                token, token, companyName, buildingValue, buildingEligible, token, buildingValue, companyName, city, city,
+                token, token, machineValue, machineEligible,
+                Integer.parseInt(buildingValue) + Integer.parseInt(machineValue),
+                Integer.parseInt(buildingEligible) + Integer.parseInt(machineEligible)
+        );
+    }
+
+    private String sampleCollateralRequestedResult(CustomerEntity customer, String token) {
+        String companyName = jsonEscape(safe(customer.getCompanyName(), "Unknown Company"));
+        return """
+                {
+                  "collaterals": [
+                    {
+                      "id": "COL-REQ-%s-01",
+                      "code": "COL-NEW-%s-01",
+                      "collateralType": "Vehicle",
+                      "description": "Operational truck fleet - %s",
+                      "ownershipType": "Borrower-owned",
+                      "currency": "IDR",
+                      "marketValue": "0",
+                      "eligibleValue": "0",
+                      "haircut": "35",
+                      "notes": "Waiting for appraiser assignment."
+                    }
+                  ],
+                  "summary": {
+                    "status": "Pending",
+                    "notes": "Queued for appraisal scheduling."
+                  }
+                }
+                """.formatted(token, token, companyName);
+    }
+
+    private String customerToken(CustomerEntity customer, int ordinal) {
+        String raw = safe(customer.getCifNumber(), "CUST" + ordinal)
+                .replaceAll("[^A-Za-z0-9]", "")
+                .toUpperCase();
+        if (raw.isBlank()) {
+            raw = "CUST" + ordinal;
+        }
+        return raw.length() > 12 ? raw.substring(raw.length() - 12) : raw;
+    }
+
+    private String safe(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        return value;
+    }
+
+    private String jsonEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private void seedBpmnRegistry(BpmnModelRepository bpmnModelRepository, RepositoryService repositoryService, String processKey, String deployedBy) throws Exception {

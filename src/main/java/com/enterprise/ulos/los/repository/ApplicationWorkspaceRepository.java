@@ -11,5 +11,7 @@ public interface ApplicationWorkspaceRepository extends JpaRepository<Applicatio
 
     Optional<ApplicationWorkspaceEntity> findByProcessInstanceId(String processInstanceId);
 
+    Optional<ApplicationWorkspaceEntity> findTopByCustomer_CifNumberOrderByUpdatedAtDesc(String cifNumber);
+
     long countByWorkflowStatus(String workflowStatus);
 }

@@ -49,6 +49,15 @@ public final class WorkflowApiModels {
     ) {
     }
 
+    public record ApprovalHistoryItem(
+            String stage,
+            String decision,
+            String actor,
+            String notes,
+            LocalDateTime decidedAt
+    ) {
+    }
+
     public record DashboardSummaryResponse(
             long totalCustomers,
             long totalApplications,
@@ -56,8 +65,33 @@ public final class WorkflowApiModels {
             long underReviewApplications,
             long approvedApplications,
             long rejectedApplications,
+            long hardStopApplications,
             long openTasks,
-            BigDecimal totalExposure
+            BigDecimal totalExposure,
+            long pendingTboCount
     ) {
+        public DashboardSummaryResponse(
+                long totalCustomers,
+                long totalApplications,
+                long draftApplications,
+                long underReviewApplications,
+                long approvedApplications,
+                long rejectedApplications,
+                long openTasks,
+                BigDecimal totalExposure
+        ) {
+            this(
+                    totalCustomers,
+                    totalApplications,
+                    draftApplications,
+                    underReviewApplications,
+                    approvedApplications,
+                    rejectedApplications,
+                    0,
+                    openTasks,
+                    totalExposure,
+                    0
+            );
+        }
     }
 }

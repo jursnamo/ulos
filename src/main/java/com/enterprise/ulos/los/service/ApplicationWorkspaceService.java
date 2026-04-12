@@ -67,6 +67,8 @@ public class ApplicationWorkspaceService {
         entity.setTboDocsJson(jsonSectionMapper.toJson(request.tboDocuments()));
         entity.setFinancialsJson(jsonSectionMapper.toJson(request.financials()));
         entity.setSlikJson(jsonSectionMapper.toJson(request.slikSubjects()));
+        entity.setLinkedSlikCheckRef(request.linkedSlikCheckRef());
+        entity.setLinkedCollateralCheckRef(request.linkedCollateralCheckRef());
         entity.setRemarks(request.remarks());
         entity.setProposedExposure(jsonSectionMapper.sumExposure(request.facilities()));
 
@@ -222,6 +224,8 @@ public class ApplicationWorkspaceService {
                 parseNode(entity.getTboDocsJson()),
                 parseNode(entity.getFinancialsJson()),
                 parseNode(entity.getSlikJson()),
+                entity.getLinkedSlikCheckRef(),
+                entity.getLinkedCollateralCheckRef(),
                 entity.getRemarks(),
                 history,
                 entity.getCreatedAt(),

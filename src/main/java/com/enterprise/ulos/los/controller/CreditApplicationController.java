@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/applications")
+@RequestMapping("/api/legacy-credit-applications")
 @PreAuthorize("hasAnyRole('ADMIN','RM','ANALYST','BRANCH_MANAGER','REGIONAL_HEAD','CREDIT_COMMITTEE','BOARD_OF_DIRECTORS')")
 public class CreditApplicationController {
 
